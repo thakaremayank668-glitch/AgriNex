@@ -1,0 +1,6 @@
+{
+  "name": "AgriNex - AI Farmer Ecosystem",
+  "description": "AI-powered farmer decision-support platform connecting farmers directly with buyers with fair pricing, yield pooling, AI quality grading, and optimized logistics.",
+  "requestFramePermissions": ["camera", "microphone"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
