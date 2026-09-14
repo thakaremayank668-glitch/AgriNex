@@ -20,10 +20,10 @@ import {
 import { UserRole } from '../../types';
 
 interface LandingPageProps {
-  onSelectRole: (role: UserRole) => void;
-  onOpenVoiceAssistant: () => void;
-  onOpenAiQuality: () => void;
-  onOpenDesignSystem: () => void;
+  onSelectRole?: (role: UserRole) => void;
+  onOpenVoiceAssistant?: () => void;
+  onOpenAiQuality?: () => void;
+  onOpenDesignSystem?: () => void;
 }
 
 export const LandingPage: React.FC<LandingPageProps> = ({
@@ -119,7 +119,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
 
           <div className="flex flex-wrap items-center gap-3 pt-2">
             <button
-              onClick={() => onSelectRole('farmer')}
+              onClick={() => onSelectRole?.('farmer')}
               className="px-6 py-3.5 rounded-2xl bg-emerald-500 hover:bg-emerald-400 text-stone-950 font-black text-xs uppercase tracking-wider shadow-lg transition-all flex items-center gap-2"
             >
               <span>Explore Farmer App (Primary)</span>
@@ -257,7 +257,7 @@ export const LandingPage: React.FC<LandingPageProps> = ({
               </div>
 
               <button
-                onClick={() => onSelectRole(p.role)}
+                onClick={() => onSelectRole?.(p.role)}
                 className="w-full py-3 rounded-xl bg-stone-900 hover:bg-emerald-600 text-white font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-xs"
               >
                 <span>{p.actionText}</span>

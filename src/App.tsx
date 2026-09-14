@@ -47,6 +47,7 @@ export default function App() {
   const [isDesignSystemOpen, setIsDesignSystemOpen] = useState<boolean>(false);
   const [isAuthOpen, setIsAuthOpen] = useState<boolean>(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState<boolean>(false);
+  const [isMobileFrame, setIsMobileFrame] = useState<boolean>(false);
 
   // Unread notifications count
   const unreadNotificationsCount = notifications.filter((n) => !n.read).length;
@@ -202,23 +203,33 @@ export default function App() {
       {/* Low-Connectivity / Offline Banner */}
       <OfflineBanner
         isOffline={isOffline}
+        onReconnect={() => setIsOffline(false)}
         onToggleOffline={() => setIsOffline(!isOffline)}
+        pendingSyncCount={2}
       />
 
       {/* Primary Sticky Header & Multi-Persona Switcher */}
       <Navbar
         currentRole={currentRole}
+        onSelectRole={(role) => setCurrentRole(role)}
         onRoleChange={(role) => setCurrentRole(role)}
+        language={selectedLanguage}
         selectedLanguage={selectedLanguage}
+        onChangeLanguage={(lang) => setSelectedLanguage(lang)}
         onLanguageChange={(lang) => setSelectedLanguage(lang)}
+        isOfflineMode={isOffline}
         isOffline={isOffline}
+        onToggleOfflineMode={() => setIsOffline(!isOffline)}
         onToggleOffline={() => setIsOffline(!isOffline)}
         onOpenVoiceAssistant={() => setIsVoiceOpen(true)}
         onOpenAiQuality={() => setIsQualityOpen(true)}
         onOpenDesignSystem={() => setIsDesignSystemOpen(true)}
         onOpenAuth={() => setIsAuthOpen(true)}
         onOpenNotifications={() => setIsNotificationsOpen(true)}
+        unreadNotifsCount={unreadNotificationsCount}
         unreadNotificationsCount={unreadNotificationsCount}
+        isMobileFrame={isMobileFrame}
+        onToggleMobileFrame={() => setIsMobileFrame((prev) => !prev)}
       />
 
       {/* Main Container */}
@@ -235,16 +246,46 @@ export default function App() {
 
         {/* VIEW 2: FARMER DASHBOARD (Primary Flow) */}
         {currentRole === 'farmer' && (
-          <FarmerDashboard
-            crops={crops}
-            pools={pools}
-            orders={orders}
-            mandiPrices={mandiPrices}
-            onOpenVoiceAssistant={() => setIsVoiceOpen(true)}
-            onOpenAiQuality={() => setIsQualityOpen(true)}
-            onAddNewCrop={handleAddNewCrop}
-            onJoinPool={handleContributeToPool}
-          />
+          isMobileFrame ? (
+            <div className="flex justify-center py-2">
+              <div className="w-full max-w-[420px] bg-stone-900 p-3 rounded-[3rem] shadow-2xl border-4 border-stone-700">
+                {/* Mobile speaker & camera notch */}
+                <div className="flex justify-center items-center pb-2">
+                  <div className="w-20 h-4 bg-stone-800 rounded-full flex items-center justify-center gap-1.5">
+                    <span className="w-2 h-2 rounded-full bg-stone-700" />
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                  </div>
+                </div>
+                <div className="bg-stone-50 rounded-[2.2rem] overflow-hidden min-h-[680px] max-h-[82vh] overflow-y-auto">
+                  <FarmerDashboard
+                    crops={crops}
+                    pools={pools}
+                    orders={orders}
+                    mandiPrices={mandiPrices}
+                    onOpenVoiceAssistant={() => setIsVoiceOpen(true)}
+                    onOpenAiQuality={() => setIsQualityOpen(true)}
+                    onAddNewCrop={handleAddNewCrop}
+                    onJoinPool={handleContributeToPool}
+                  />
+                </div>
+                {/* Home indicator */}
+                <div className="flex justify-center pt-2">
+                  <div className="w-28 h-1 bg-stone-600 rounded-full" />
+                </div>
+              </div>
+            </div>
+          ) : (
+            <FarmerDashboard
+              crops={crops}
+              pools={pools}
+              orders={orders}
+              mandiPrices={mandiPrices}
+              onOpenVoiceAssistant={() => setIsVoiceOpen(true)}
+              onOpenAiQuality={() => setIsQualityOpen(true)}
+              onAddNewCrop={handleAddNewCrop}
+              onJoinPool={handleContributeToPool}
+            />
+          )
         )}
 
         {/* VIEW 3: BUYER MARKETPLACE */}
@@ -285,6 +326,8 @@ export default function App() {
         onClose={() => setIsVoiceOpen(false)}
         selectedLanguage={selectedLanguage}
         onSelectLanguage={(lang) => setSelectedLanguage(lang)}
+        onNavigateToFairPrice={() => setCurrentRole('farmer')}
+        onNavigateToPools={() => setCurrentRole('farmer')}
         onNavigate={(target) => {
           if (target === 'fair-price' || target === 'pools' || target === 'crops') {
             setCurrentRole('farmer');
@@ -297,6 +340,11 @@ export default function App() {
       <AiQualityModal
         isOpen={isQualityOpen}
         onClose={() => setIsQualityOpen(false)}
+        onApplyGrade={(grade, score) => {
+          setCrops((prev) =>
+            prev.map((c, i) => (i === 0 ? { ...c, qualityGrade: grade, qualityScore: score } : c))
+          );
+        }}
         onApplyInspection={(grade, score) => {
           // Update farmer tomato quality
           setCrops((prev) =>
@@ -313,6 +361,7 @@ export default function App() {
       <AuthModal
         isOpen={isAuthOpen}
         onClose={() => setIsAuthOpen(false)}
+        onLoginSuccess={(role) => setCurrentRole(role)}
         onSelectRole={(role) => setCurrentRole(role)}
       />
 

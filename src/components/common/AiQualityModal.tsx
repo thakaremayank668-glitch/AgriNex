@@ -17,12 +17,14 @@ interface AiQualityModalProps {
   isOpen: boolean;
   onClose: () => void;
   onApplyGrade?: (grade: string, score: number) => void;
+  onApplyInspection?: (grade: string, score: number) => void;
 }
 
 export const AiQualityModal: React.FC<AiQualityModalProps> = ({
   isOpen,
   onClose,
   onApplyGrade,
+  onApplyInspection,
 }) => {
   const [analyzing, setAnalyzing] = useState(false);
   const [selectedSample, setSelectedSample] = useState<number>(0);
@@ -296,7 +298,8 @@ export const AiQualityModal: React.FC<AiQualityModalProps> = ({
 
           <button
             onClick={() => {
-              if (onApplyGrade) onApplyGrade(activeSample.grade, activeSample.score);
+              const applyFn = onApplyGrade || onApplyInspection;
+              if (applyFn) applyFn(activeSample.grade, activeSample.score);
               onClose();
             }}
             className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md transition-all flex items-center gap-2"

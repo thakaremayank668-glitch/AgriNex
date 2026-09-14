@@ -3,14 +3,16 @@ import { WifiOff, RefreshCw, Send, CheckCircle2, AlertTriangle, Smartphone } fro
 
 interface OfflineBannerProps {
   isOffline: boolean;
-  onReconnect: () => void;
-  pendingSyncCount: number;
+  onReconnect?: () => void;
+  onToggleOffline?: () => void;
+  pendingSyncCount?: number;
 }
 
 export const OfflineBanner: React.FC<OfflineBannerProps> = ({
   isOffline,
   onReconnect,
-  pendingSyncCount,
+  onToggleOffline,
+  pendingSyncCount = 2,
 }) => {
   const [isSyncing, setIsSyncing] = useState(false);
   const [smsSentNotice, setSmsSentNotice] = useState(false);
@@ -21,7 +23,8 @@ export const OfflineBanner: React.FC<OfflineBannerProps> = ({
     setIsSyncing(true);
     setTimeout(() => {
       setIsSyncing(false);
-      onReconnect();
+      if (onReconnect) onReconnect();
+      else if (onToggleOffline) onToggleOffline();
     }, 1200);
   };
 

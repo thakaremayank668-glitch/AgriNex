@@ -19,13 +19,15 @@ import { Role, Language } from '../../types';
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLoginSuccess: (role: Role) => void;
+  onLoginSuccess?: (role: Role) => void;
+  onSelectRole?: (role: Role) => void;
 }
 
 export const AuthModal: React.FC<AuthModalProps> = ({
   isOpen,
   onClose,
   onLoginSuccess,
+  onSelectRole,
 }) => {
   const [authMode, setAuthMode] = useState<'login' | 'register' | 'otp'>('login');
   const [selectedRole, setSelectedRole] = useState<Role>('farmer');
@@ -49,7 +51,11 @@ export const AuthModal: React.FC<AuthModalProps> = ({
 
   const handleVerifyOtp = (e: React.FormEvent) => {
     e.preventDefault();
-    onLoginSuccess(selectedRole);
+    if (typeof onLoginSuccess === 'function') {
+      onLoginSuccess(selectedRole);
+    } else if (typeof onSelectRole === 'function') {
+      onSelectRole(selectedRole);
+    }
     onClose();
   };
 

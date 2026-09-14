@@ -22,37 +22,60 @@ import { Role, Language } from '../../types';
 
 interface NavbarProps {
   currentRole: Role;
-  onSelectRole: (role: Role) => void;
-  language: Language;
-  onChangeLanguage: (lang: Language) => void;
-  isOfflineMode: boolean;
-  onToggleOfflineMode: () => void;
-  onOpenVoiceAssistant: () => void;
-  onOpenAiQuality: () => void;
-  onOpenDesignSystem: () => void;
-  onOpenAuth: () => void;
-  unreadNotifsCount: number;
-  onOpenNotifications: () => void;
-  isMobileFrame: boolean;
-  onToggleMobileFrame: () => void;
+  onSelectRole?: (role: Role) => void;
+  onRoleChange?: (role: Role) => void;
+  language?: Language;
+  selectedLanguage?: Language;
+  onChangeLanguage?: (lang: Language) => void;
+  onLanguageChange?: (lang: Language) => void;
+  isOfflineMode?: boolean;
+  isOffline?: boolean;
+  onToggleOfflineMode?: () => void;
+  onToggleOffline?: () => void;
+  onOpenVoiceAssistant?: () => void;
+  onOpenAiQuality?: () => void;
+  onOpenDesignSystem?: () => void;
+  onOpenAuth?: () => void;
+  unreadNotifsCount?: number;
+  unreadNotificationsCount?: number;
+  onOpenNotifications?: () => void;
+  isMobileFrame?: boolean;
+  onToggleMobileFrame?: () => void;
 }
 
-export const Navbar: React.FC<NavbarProps> = ({
-  currentRole,
-  onSelectRole,
-  language,
-  onChangeLanguage,
-  isOfflineMode,
-  onToggleOfflineMode,
-  onOpenVoiceAssistant,
-  onOpenAiQuality,
-  onOpenDesignSystem,
-  onOpenAuth,
-  unreadNotifsCount,
-  onOpenNotifications,
-  isMobileFrame,
-  onToggleMobileFrame,
-}) => {
+export const Navbar: React.FC<NavbarProps> = (props) => {
+  const currentRole = props.currentRole;
+  const onSelectRole = (r: Role) => {
+    if (typeof props.onSelectRole === 'function') {
+      props.onSelectRole(r);
+    } else if (typeof props.onRoleChange === 'function') {
+      props.onRoleChange(r);
+    }
+  };
+  const language = props.language || props.selectedLanguage || 'en';
+  const onChangeLanguage = (lang: Language) => {
+    if (typeof props.onChangeLanguage === 'function') {
+      props.onChangeLanguage(lang);
+    } else if (typeof props.onLanguageChange === 'function') {
+      props.onLanguageChange(lang);
+    }
+  };
+  const isOfflineMode = props.isOfflineMode ?? props.isOffline ?? false;
+  const onToggleOfflineMode = () => {
+    if (typeof props.onToggleOfflineMode === 'function') {
+      props.onToggleOfflineMode();
+    } else if (typeof props.onToggleOffline === 'function') {
+      props.onToggleOffline();
+    }
+  };
+  const onOpenVoiceAssistant = () => props.onOpenVoiceAssistant?.();
+  const onOpenAiQuality = () => props.onOpenAiQuality?.();
+  const onOpenDesignSystem = () => props.onOpenDesignSystem?.();
+  const onOpenAuth = () => props.onOpenAuth?.();
+  const unreadNotifsCount = props.unreadNotifsCount ?? props.unreadNotificationsCount ?? 0;
+  const onOpenNotifications = () => props.onOpenNotifications?.();
+  const isMobileFrame = props.isMobileFrame ?? false;
+  const onToggleMobileFrame = () => props.onToggleMobileFrame?.();
   const roles: { id: Role; label: string; icon: React.ReactNode; badge?: string }[] = [
     { id: 'landing', label: 'Overview', icon: <Home className="w-3.5 h-3.5" /> },
     { id: 'farmer', label: 'Farmer App', icon: <Sprout className="w-3.5 h-3.5" />, badge: 'Mobile-First' },

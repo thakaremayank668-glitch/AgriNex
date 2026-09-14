@@ -7,6 +7,9 @@ interface VoiceAssistantModalProps {
   onClose: () => void;
   onNavigateToFairPrice?: () => void;
   onNavigateToPools?: () => void;
+  selectedLanguage?: 'gu' | 'hi' | 'en';
+  onSelectLanguage?: (lang: 'gu' | 'hi' | 'en') => void;
+  onNavigate?: (target: 'fair-price' | 'pools' | 'crops' | 'market') => void;
 }
 
 export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
@@ -14,12 +17,21 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
   onClose,
   onNavigateToFairPrice,
   onNavigateToPools,
+  selectedLanguage,
+  onSelectLanguage,
+  onNavigate,
 }) => {
-  const [selectedLang, setSelectedLang] = useState<'gu' | 'hi' | 'en'>('gu');
+  const [selectedLang, setSelectedLang] = useState<'gu' | 'hi' | 'en'>(selectedLanguage || 'gu');
   const [isListening, setIsListening] = useState(false);
   const [activeQuery, setActiveQuery] = useState('');
   const [assistantResponse, setAssistantResponse] = useState<string | null>(null);
   const [isSpeaking, setIsSpeaking] = useState(false);
+
+  useEffect(() => {
+    if (selectedLanguage && selectedLanguage !== selectedLang) {
+      setSelectedLang(selectedLanguage);
+    }
+  }, [selectedLanguage]);
 
   useEffect(() => {
     if (!isOpen) {
@@ -241,22 +253,24 @@ export const VoiceAssistantModal: React.FC<VoiceAssistantModalProps> = ({
                 </div>
 
                 <div className="flex items-center gap-2">
-                  {onNavigateToFairPrice && (
+                  {(onNavigateToFairPrice || onNavigate) && (
                     <button
                       onClick={() => {
                         onClose();
-                        onNavigateToFairPrice();
+                        if (onNavigateToFairPrice) onNavigateToFairPrice();
+                        else if (onNavigate) onNavigate('fair-price');
                       }}
                       className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-sm"
                     >
                       Cost Breakdown
                     </button>
                   )}
-                  {onNavigateToPools && (
+                  {(onNavigateToPools || onNavigate) && (
                     <button
                       onClick={() => {
                         onClose();
-                        onNavigateToPools();
+                        if (onNavigateToPools) onNavigateToPools();
+                        else if (onNavigate) onNavigate('pools');
                       }}
                       className="px-3 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 font-medium text-xs border border-stone-700"
                     >
