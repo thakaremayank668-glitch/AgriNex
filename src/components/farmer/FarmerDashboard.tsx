@@ -13,19 +13,23 @@ import {
   TrendingDown, 
   CheckCircle2, 
   Clock, 
-  Sparkles,
-  Layers,
-  ChevronRight,
-  Filter,
-  FileCheck,
-  AlertCircle
+  Sparkles, 
+  Layers, 
+  ChevronRight, 
+  Filter, 
+  FileCheck, 
+  AlertCircle,
+  Download,
+  History
 } from 'lucide-react';
 import { Crop, YieldPool, Order, MandiPrice } from '../../types';
+import { CURRENT_FARMER } from '../../data/mockData';
 import { FairPriceCalculator } from './FairPriceCalculator';
 import { MarketPricesView } from './MarketPricesView';
 import { YieldPoolingView } from './YieldPoolingView';
 import { LandVerificationView } from './LandVerificationView';
 import { FarmerOrdersView } from './FarmerOrdersView';
+import { FarmerSalesHistoryView } from './FarmerSalesHistoryView';
 
 interface FarmerDashboardProps {
   crops: Crop[];
@@ -48,7 +52,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
   onAddNewCrop,
   onJoinPool,
 }) => {
-  const [activeTab, setActiveTab] = useState<'dashboard' | 'crops' | 'fair-price' | 'market-prices' | 'pools' | 'orders' | 'verification'>('dashboard');
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'crops' | 'fair-price' | 'market-prices' | 'pools' | 'orders' | 'verification' | 'history'>('dashboard');
   const [addCropModalOpen, setAddCropModalOpen] = useState(false);
 
   // New crop form state
@@ -56,6 +60,56 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
   const [newYieldKg, setNewYieldKg] = useState(1000);
   const [newListKg, setNewListKg] = useState(500);
   const [newFairPrice, setNewFairPrice] = useState(30);
+
+  // CSV Report Generator for Crop Listings and Sales History
+  const handleDownloadReport = () => {
+    const timestamp = new Date().toLocaleString('en-IN');
+    let csv = `AGRINEX - FARMER COMPREHENSIVE ACTIVITY & SALES REPORT\n`;
+    csv += `Generated On,${timestamp}\n`;
+    csv += `Farmer Name,${CURRENT_FARMER.name}\n`;
+    csv += `Farmer ID,${CURRENT_FARMER.farmerId}\n`;
+    csv += `Location,"${CURRENT_FARMER.village}, ${CURRENT_FARMER.taluka}, ${CURRENT_FARMER.district}, ${CURRENT_FARMER.state}"\n`;
+    csv += `Land Verification Status,${CURRENT_FARMER.verificationStatus} (Survey #${CURRENT_FARMER.surveyNumber} - ${CURRENT_FARMER.landAreaAcres} Acres)\n\n`;
+
+    // SECTION 1: CURRENT CROP LISTINGS
+    csv += `--- CURRENT CROP LISTINGS & HARVEST INVENTORY ---\n`;
+    csv += `Crop ID,Crop Name,Category,Variety,Expected Yield (kg),Listed Qty (kg),Cost per kg (INR),Fair Floor Price (INR),Market Price (INR),Quality Grade,Quality Score,Freshness,Status\n`;
+    crops.forEach((c) => {
+      csv += `"${c.id}","${c.name}","${c.category}","${c.variety}",${c.expectedYieldKg},${c.listedKg},${c.costPerKg},${c.fairFloorPricePerKg},${c.marketPricePerKg},"${c.qualityGrade}",${c.qualityScore},"${c.freshness}","${c.status}"\n`;
+    });
+    csv += `\n`;
+
+    // SECTION 2: SALES & ESCROW SETTLEMENT HISTORY
+    csv += `--- SALES & ESCROW SETTLEMENT HISTORY ---\n`;
+    csv += `Order ID,Crop / Lot Description,Quantity (kg),Price per kg (INR),Total Contract Value (INR),Buyer Name,Order Date,Escrow Status,Payment Secured,Pickup Completed,Delivery Completed,Fund Released\n`;
+    orders.forEach((o) => {
+      csv += `"${o.id}","${o.cropName}",${o.quantityKg},${o.pricePerKg},${o.totalAmount},"${o.buyerName}","${o.orderDate}","${o.escrowStatus}",${o.timeline?.paymentSecured ? 'YES' : 'NO'},${o.timeline?.pickup ? 'YES' : 'NO'},${o.timeline?.delivery ? 'YES' : 'NO'},${o.timeline?.paymentRelease ? 'YES' : 'NO'}\n`;
+    });
+    csv += `\n`;
+
+    // SECTION 3: SUMMARY TOTALS
+    const totalListedKg = crops.reduce((sum, c) => sum + (c.listedKg || 0), 0);
+    const totalOrderValue = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+    const releasedEarnings = orders
+      .filter((o) => o.escrowStatus === 'RELEASED' || o.timeline?.paymentRelease)
+      .reduce((sum, o) => sum + (o.totalAmount || 0), 0);
+
+    csv += `--- SUMMARY AGGREGATES ---\n`;
+    csv += `Total Active Crops Listed,${crops.length}\n`;
+    csv += `Total Volume Listed (kg),${totalListedKg}\n`;
+    csv += `Total Contracted Sales Value (INR),Rs ${totalOrderValue}\n`;
+    csv += `Settled & Disbursed Earnings (INR),Rs ${releasedEarnings}\n`;
+
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `Agrinex_Farmer_Report_${CURRENT_FARMER.name.replace(/\s+/g, '_')}_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handleAddCropSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -74,37 +128,111 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
   };
 
   const navItems = [
-    { id: 'dashboard', label: 'Dashboard', icon: <Sprout className="w-4 h-4" /> },
-    { id: 'crops', label: 'My Crops', icon: <Layers className="w-4 h-4" /> },
-    { id: 'fair-price', label: 'Fair Price', icon: <Calculator className="w-4 h-4" /> },
-    { id: 'market-prices', label: 'Market Prices', icon: <TrendingUp className="w-4 h-4" /> },
-    { id: 'pools', label: 'Yield Pools', icon: <Users className="w-4 h-4" /> },
-    { id: 'orders', label: 'Orders', icon: <CreditCard className="w-4 h-4" /> },
-    { id: 'verification', label: 'Verification', icon: <ShieldCheck className="w-4 h-4" /> },
+    { id: 'dashboard', label: 'Dashboard', icon: <Sprout className="w-4 h-4" />, badge: 'Overview' },
+    { id: 'crops', label: 'My Crops', icon: <Layers className="w-4 h-4" />, badge: `${crops.length} listed` },
+    { id: 'history', label: 'Sales & Settlement History', icon: <History className="w-4 h-4" />, badge: 'Ledger' },
+    { id: 'fair-price', label: 'Fair Price Calculator', icon: <Calculator className="w-4 h-4" />, badge: '12 factors' },
+    { id: 'market-prices', label: 'Market Benchmarks', icon: <TrendingUp className="w-4 h-4" />, badge: 'APMC Live' },
+    { id: 'pools', label: 'Yield Pooling', icon: <Users className="w-4 h-4" />, badge: `${pools.length} pools` },
+    { id: 'orders', label: 'Escrow Orders', icon: <CreditCard className="w-4 h-4" />, badge: `${orders.length} active` },
+    { id: 'verification', label: '7/12 Land Verification', icon: <ShieldCheck className="w-4 h-4" />, badge: 'Verified' },
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Sub-Navigation Tabs Bar */}
-      <div className="bg-white rounded-2xl p-1.5 border border-stone-200 shadow-xs flex items-center gap-1 overflow-x-auto">
-        {navItems.map((item) => {
-          const isActive = activeTab === item.id;
-          return (
-            <button
-              key={item.id}
-              onClick={() => setActiveTab(item.id as any)}
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-                isActive
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-              }`}
-            >
-              {item.icon}
-              <span>{item.label}</span>
-            </button>
-          );
-        })}
-      </div>
+    <div className="flex flex-col lg:flex-row items-start gap-6">
+      {/* LEFT SIDEBAR: SUB-MENU BUTTONS */}
+      <aside className="w-full lg:w-64 lg:shrink-0 lg:sticky lg:top-24 space-y-4">
+        <div className="bg-white rounded-3xl p-3 border border-stone-200/90 shadow-xs space-y-2">
+          <div className="px-3 pt-2 pb-1 border-b border-stone-100 flex items-center justify-between">
+            <span className="text-[11px] font-bold tracking-wider text-stone-700 uppercase">
+              Farmer Sub-Menu
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-semibold border border-emerald-300">
+              8 Modules
+            </span>
+          </div>
+
+          <nav aria-label="Farmer sub-menu" className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible py-1">
+            {navItems.map((item) => {
+              const isActive = activeTab === item.id;
+              return (
+                <button
+                  key={item.id}
+                  id={`farmer-submenu-${item.id}`}
+                  onClick={() => setActiveTab(item.id as any)}
+                  className={`flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs transition-all w-auto shrink-0 whitespace-nowrap lg:w-full text-left ${
+                    isActive
+                      ? 'bg-emerald-600 text-white shadow-sm font-bold'
+                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 font-semibold'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={isActive ? 'text-white' : 'text-emerald-700'}>{item.icon}</span>
+                    <span className="truncate">{item.label}</span>
+                  </div>
+                  {item.badge && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
+                        isActive
+                          ? 'bg-emerald-700 text-emerald-100'
+                          : 'bg-stone-100 text-stone-500'
+                      }`}
+                    >
+                      {item.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
+
+        {/* Farmer Profile & Voice Quick Access on Left Sidebar */}
+        <div className="hidden lg:block bg-stone-900 rounded-3xl p-4 text-white border border-stone-800 shadow-sm space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-emerald-600/30 border border-emerald-500/40 text-emerald-400 flex items-center justify-center font-bold text-sm">
+              RP
+            </div>
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-xs text-white truncate">Ramesh Patel</span>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+              </div>
+              <span className="text-[11px] text-stone-400 block truncate">Sanand Taluka, Gujarat</span>
+            </div>
+          </div>
+
+          <div className="pt-2 border-t border-stone-800 text-[11px] text-stone-300 space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-stone-400">Land Title</span>
+              <span className="font-mono font-semibold text-emerald-400">7/12 RoR Verified</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-stone-400">Survey No.</span>
+              <span className="font-mono font-medium">142/2-A</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-stone-400">Holding Size</span>
+              <span className="font-medium">4.5 Acres</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-stone-400">Escrow Safety</span>
+              <span className="text-emerald-400 font-semibold font-mono">100% Protected</span>
+            </div>
+          </div>
+
+          <button
+            onClick={onOpenVoiceAssistant}
+            className="w-full py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-400 text-stone-950 font-bold text-xs flex items-center justify-center gap-2 transition-colors shadow-sm"
+          >
+            <Mic className="w-3.5 h-3.5" />
+            <span>Voice Assistant (Gujarati/Hindi)</span>
+          </button>
+        </div>
+      </aside>
+
+      {/* RIGHT SIDE: MAIN CONTENT AREA */}
+      <div className="flex-1 min-w-0 w-full space-y-6">
 
       {/* VIEW: MAIN FARMER DASHBOARD */}
       {activeTab === 'dashboard' && (
@@ -129,17 +257,26 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
                 </p>
               </div>
 
-              {/* Status Badge mandated in spec */}
-              <div className="flex items-center gap-3">
-                <div className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 shadow-xs">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              {/* Status Badge & Action Controls */}
+              <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+                <div className="px-3.5 py-1.5 rounded-full bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-bold flex items-center gap-1.5 shadow-xs shrink-0">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                   <span>✓ Land Verified</span>
                 </div>
                 <button
-                  onClick={onOpenVoiceAssistant}
-                  className="px-3.5 py-1.5 rounded-full bg-amber-500 text-stone-950 font-black text-xs flex items-center gap-1.5 shadow-md hover:bg-amber-400 transition-colors animate-pulse"
+                  id="farmer-hdr-download-report-btn"
+                  onClick={handleDownloadReport}
+                  className="px-3.5 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-md transition-all shrink-0 whitespace-nowrap"
+                  title="Export complete crop listings and sales history as CSV"
                 >
-                  <Mic className="w-4 h-4" />
+                  <Download className="w-4 h-4 shrink-0" />
+                  <span>Download Report</span>
+                </button>
+                <button
+                  onClick={onOpenVoiceAssistant}
+                  className="px-3.5 py-1.5 rounded-full bg-amber-500 text-stone-950 font-black text-xs flex items-center gap-1.5 shadow-md hover:bg-amber-400 transition-colors shrink-0 whitespace-nowrap"
+                >
+                  <Mic className="w-4 h-4 shrink-0" />
                   <span>Voice Assist</span>
                 </button>
               </div>
@@ -222,7 +359,7 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
 
             {/* Card 5: Earnings */}
             <div 
-              onClick={() => setActiveTab('orders')} 
+              onClick={() => setActiveTab('history')} 
               className="p-5 rounded-3xl bg-white border border-stone-200 shadow-xs hover:border-emerald-500 cursor-pointer transition-all text-left col-span-2 lg:col-span-1 group"
             >
               <div className="flex items-center justify-between text-xs text-stone-700">
@@ -236,37 +373,48 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
             </div>
           </div>
 
-          {/* MAIN CTA AND SECONDARY ACTIONS (From Prompt):
+          {/* MAIN CTA AND SECONDARY ACTIONS:
               Main CTA: "+ Add Crop"
-              Secondary actions: "Calculate Fair Price", "List Produce", "Join Pool"
+              Secondary actions: "Download Report", "Sales History", "Calculate Fair Price", "Join Pool"
           */}
           <div className="bg-stone-100 rounded-3xl p-4 border border-stone-200 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             {/* Main CTA */}
             <button
+              id="farmer-add-crop-cta-btn"
               onClick={() => setAddCropModalOpen(true)}
-              className="px-6 py-3.5 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2"
+              className="px-6 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white font-black text-sm uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 shrink-0 whitespace-nowrap"
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="w-5 h-5 shrink-0" />
               <span>+ Add Crop</span>
             </button>
 
             {/* Secondary Actions */}
-            <div className="grid grid-cols-3 gap-2 flex-1 sm:max-w-md">
+            <div className="flex flex-wrap items-center gap-2 flex-1 sm:justify-end">
+              <button
+                id="farmer-download-report-action-btn"
+                onClick={handleDownloadReport}
+                className="py-2.5 px-3.5 rounded-xl bg-white hover:bg-stone-50 border border-emerald-300 text-emerald-800 font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+                title="Download CSV report of crop listings and sales history"
+              >
+                <Download className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                <span>Download Report</span>
+              </button>
+              <button
+                onClick={() => setActiveTab('history')}
+                className="py-2.5 px-3.5 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+              >
+                <History className="w-3.5 h-3.5 text-stone-600 shrink-0" />
+                <span>Sales History</span>
+              </button>
               <button
                 onClick={() => setActiveTab('fair-price')}
-                className="py-2.5 px-3 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-xs shadow-xs text-center transition-all"
+                className="py-2.5 px-3.5 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-xs shadow-xs transition-all shrink-0 whitespace-nowrap"
               >
                 Calculate Fair Price
               </button>
               <button
-                onClick={() => setAddCropModalOpen(true)}
-                className="py-2.5 px-3 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-xs shadow-xs text-center transition-all"
-              >
-                List Produce
-              </button>
-              <button
                 onClick={() => setActiveTab('pools')}
-                className="py-2.5 px-3 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-xs shadow-xs text-center transition-all"
+                className="py-2.5 px-3.5 rounded-xl bg-white hover:bg-stone-50 border border-stone-300 text-stone-800 font-bold text-xs shadow-xs transition-all shrink-0 whitespace-nowrap"
               >
                 Join Pool
               </button>
@@ -467,10 +615,20 @@ export const FarmerDashboard: React.FC<FarmerDashboardProps> = ({
         />
       )}
 
+      {/* VIEW: SALES & SETTLEMENT HISTORY */}
+      {activeTab === 'history' && (
+        <FarmerSalesHistoryView
+          orders={orders}
+          crops={crops}
+          onDownloadReport={handleDownloadReport}
+        />
+      )}
+
       {/* VIEW: LAND VERIFICATION */}
       {activeTab === 'verification' && (
         <LandVerificationView />
       )}
+      </div>
 
       {/* ADD CROP MODAL */}
       {addCropModalOpen && (

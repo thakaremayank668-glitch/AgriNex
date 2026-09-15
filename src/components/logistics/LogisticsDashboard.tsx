@@ -12,7 +12,10 @@ import {
   KeyRound, 
   ChevronRight,
   AlertCircle,
-  ArrowRight
+  ArrowRight,
+  History,
+  Download,
+  FileText
 } from 'lucide-react';
 import { LogisticsRoute, LogisticsStopDetail } from '../../types';
 
@@ -25,14 +28,44 @@ export const LogisticsDashboard: React.FC<LogisticsDashboardProps> = ({
   route,
   onUpdateStopStatus,
 }) => {
+  const [activeTab, setActiveTab] = useState<'route' | 'history' | 'fleet'>('route');
   const [activeStopIndex, setActiveStopIndex] = useState<number>(0);
   const [driverOtpInput, setDriverOtpInput] = useState('');
   const [otpSuccessMessage, setOtpSuccessMessage] = useState(false);
+  const [otpErrorMessage, setOtpErrorMessage] = useState<string | null>(null);
 
   const stops = route.stops;
   const currentStop = stops[activeStopIndex] || stops[0];
 
+  const handleExportLogisticsHistory = () => {
+    const timestamp = new Date().toLocaleString('en-IN');
+    let csv = `AGRINEX - LOGISTICS DISPATCH & COLD-CHAIN TELEMATICS HISTORY\n`;
+    csv += `Exported On,${timestamp}\n`;
+    csv += `Fleet Hub,Agrinex Cold-Chain Logistics Hub Ahmedabad\n`;
+    csv += `Vehicle Number,${route.vehicleNumber} (${route.driverName})\n\n`;
+    csv += `Trip / Route ID,Route Description,Date,Total Cargo (kg),Distance (km),Travel Time (mins),Fuel Saved (INR),Avg Reefer Temp (C),Delivery Status\n`;
+    csv += `"${route.id}","${route.routeName}","2026-09-14",${route.totalCargoKg},${route.totalDistanceKm},${route.estimatedTravelTimeMinutes},${route.estimatedFuelSavingsInr},${route.reeferTempCelsius},"In Transit"\n`;
+    csv += `"RT-AHM-089","Sanand Cluster -> BigBasket DC Bavla","2026-09-12",2800,42.5,95,780,4.0,"Completed & Signed"\n`;
+    csv += `"RT-KHD-074","Kheda Hub -> Reliance Fresh Sarkhej","2026-09-09",3200,58.0,130,1150,3.8,"Completed & Signed"\n`;
+    csv += `"RT-GNR-061","Kalol Farms -> Zomato Hyperpure Changodar","2026-09-05",2400,38.2,85,620,4.2,"Completed & Signed"\n`;
+    csv += `\n--- ACTIVE ROUTE WAYPOINT MANIFEST ---\n`;
+    csv += `Stop #,Location,Farmer / Node,Cargo (kg),ETA,Status,Security PIN\n`;
+    stops.forEach((s, idx) => {
+      csv += `${idx + 1},"${s.location}","${s.farmerName}",${s.cargoWeightKg},"${s.eta}","${s.status}","${s.otp}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Agrinex_Logistics_History_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   const handleVerifyOtp = () => {
+    setOtpErrorMessage(null);
     if (driverOtpInput === currentStop.otp || driverOtpInput === '8421' || driverOtpInput.length === 4) {
       if (onUpdateStopStatus) {
         onUpdateStopStatus(currentStop.id, 'completed');
@@ -46,52 +79,135 @@ export const LogisticsDashboard: React.FC<LogisticsDashboardProps> = ({
         }
       }, 1500);
     } else {
-      alert('Invalid OTP. Please enter the 4-digit security code provided by the farmer.');
+      setOtpErrorMessage('Invalid OTP. Please enter the 4-digit security code provided by the farmer.');
     }
   };
 
   return (
-    <div className="space-y-6">
-      {/* Route Header Banner Mandated in Section 13:
-          "Route Optimization - Visual map showing pickup route from multiple farmers.
-           Optimized route connecting farmers -> aggregation point -> buyer.
-           Details: Distance, Travel time, Estimated fuel cost savings."
-      */}
-      <div className="bg-stone-900 rounded-3xl p-6 text-white border border-stone-800 shadow-xl space-y-4">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold font-mono">
-                ROUTE #{route.id}
-              </span>
-              <span className="text-stone-400 text-xs">Vehicle: {route.vehicleNumber} ({route.driverName})</span>
-            </div>
-            <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
-              {route.routeName}
-            </h1>
-            <p className="text-xs text-stone-300 mt-0.5">
-              AI Multi-Stop Travelling Salesman TSP Cluster Algorithm v3.4
-            </p>
+    <div className="flex flex-col lg:flex-row items-start gap-6">
+      {/* LEFT SIDEBAR: SUB-MENU BUTTONS */}
+      <aside className="w-full lg:w-64 lg:shrink-0 lg:sticky lg:top-24 space-y-4">
+        <div className="bg-white rounded-3xl p-3 border border-stone-200/90 shadow-xs space-y-2">
+          <div className="px-3 pt-2 pb-1 border-b border-stone-100 flex items-center justify-between">
+            <span className="text-[11px] font-bold tracking-wider text-stone-500 uppercase">
+              Logistics Sub-Menu
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 font-semibold border border-blue-200">
+              Cold Chain
+            </span>
           </div>
 
-          <div className="flex items-center gap-3">
-            <div className="p-3 rounded-2xl bg-stone-800 border border-stone-700 flex items-center gap-2">
-              <Thermometer className="w-5 h-5 text-emerald-400" />
-              <div>
-                <span className="text-[10px] text-stone-400 block font-semibold">Cold Reefer Temp</span>
-                <span className="text-sm font-black text-white">{route.reeferTempCelsius}°C (Optimal)</span>
-              </div>
-            </div>
+          <nav aria-label="Logistics sub-menu" className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible py-1">
+            {[
+              { id: 'route', label: 'Active TSP Route', icon: <Navigation className="w-4 h-4" />, badge: 'Live' },
+              { id: 'history', label: 'Trip & Route History', icon: <History className="w-4 h-4" />, badge: 'Ledger' },
+              { id: 'fleet', label: 'Reefer Telematics', icon: <Truck className="w-4 h-4" />, badge: '4.2°C' },
+            ].map((tab) => {
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  id={`logistics-submenu-${tab.id}`}
+                  onClick={() => setActiveTab(tab.id as any)}
+                  className={`flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs transition-all w-auto shrink-0 whitespace-nowrap lg:w-full text-left ${
+                    isActive
+                      ? 'bg-blue-600 text-white shadow-sm font-bold'
+                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 font-semibold'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={isActive ? 'text-white' : 'text-blue-600'}>{tab.icon}</span>
+                    <span className="truncate">{tab.label}</span>
+                  </div>
+                  {tab.badge && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
+                        isActive
+                          ? 'bg-blue-700 text-blue-100'
+                          : 'bg-stone-100 text-stone-500'
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+        </div>
 
-            <div className="p-3 rounded-2xl bg-stone-800 border border-stone-700 flex items-center gap-2">
-              <Truck className="w-5 h-5 text-purple-400" />
-              <div>
-                <span className="text-[10px] text-stone-400 block font-semibold">Consignment Load</span>
-                <span className="text-sm font-black text-white">{route.totalCargoKg} kg / 3,000 kg</span>
-              </div>
+        {/* Quick Driver Vehicle Card */}
+        <div className="hidden lg:block bg-stone-900 rounded-3xl p-4 text-white border border-stone-800 shadow-sm space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-blue-600/30 border border-blue-500/40 text-blue-300 flex items-center justify-center font-bold text-sm">
+              <Truck className="w-5 h-5" />
+            </div>
+            <div className="min-w-0">
+              <span className="font-bold text-xs text-white block truncate">{route.driverName}</span>
+              <span className="text-[11px] text-stone-400 block truncate">{route.vehicleNumber}</span>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-stone-800 text-[11px] text-stone-300 space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-stone-400">Total Cargo</span>
+              <span className="font-bold text-white">{route.totalCargoKg} kg</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-stone-400">Reefer Temp</span>
+              <span className="font-bold text-emerald-400">{route.reeferTempCelsius}°C</span>
             </div>
           </div>
         </div>
+      </aside>
+
+      {/* RIGHT MAIN CONTENT CONTAINER */}
+      <div className="flex-1 w-full space-y-6">
+        {/* Route Header Banner */}
+        <div className="bg-stone-900 rounded-3xl p-6 text-white border border-stone-800 shadow-xl space-y-4">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 text-xs font-bold font-mono">
+                  ROUTE #{route.id}
+                </span>
+                <span className="text-stone-400 text-xs">Vehicle: {route.vehicleNumber} ({route.driverName})</span>
+              </div>
+              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">
+                {route.routeName}
+              </h1>
+              <p className="text-xs text-stone-300 mt-0.5">
+                AI Multi-Stop Travelling Salesman TSP Cluster Algorithm v3.4
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <button
+                id="logistics-download-report-btn"
+                onClick={handleExportLogisticsHistory}
+                className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1.5 shadow-xs transition-all shrink-0 whitespace-nowrap"
+                title="Download CSV report of dispatch and telematics history"
+              >
+                <Download className="w-4 h-4 shrink-0" />
+                <span>Download Report (CSV)</span>
+              </button>
+
+              <div className="p-2.5 rounded-2xl bg-stone-800 border border-stone-700 flex items-center gap-2 shrink-0">
+                <Thermometer className="w-4 h-4 text-emerald-400 shrink-0" />
+                <div>
+                  <span className="text-[10px] text-stone-400 block font-semibold">Cold Reefer Temp</span>
+                  <span className="text-xs font-black text-white">{route.reeferTempCelsius}°C</span>
+                </div>
+              </div>
+
+              <div className="p-2.5 rounded-2xl bg-stone-800 border border-stone-700 flex items-center gap-2 shrink-0">
+                <Truck className="w-4 h-4 text-purple-400 shrink-0" />
+                <div>
+                  <span className="text-[10px] text-stone-400 block font-semibold">Consignment Load</span>
+                  <span className="text-xs font-black text-white">{route.totalCargoKg} kg</span>
+                </div>
+              </div>
+            </div>
+          </div>
 
         {/* DETAILS SPECIFIED IN SECTION 13:
             Distance, Travel time, Estimated fuel cost savings
@@ -133,24 +249,25 @@ export const LogisticsDashboard: React.FC<LogisticsDashboardProps> = ({
         </div>
       </div>
 
-      {/* Main Grid: Interactive Map Visualizer + Stops Manifest */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        {/* LEFT: Route Optimization Map Canvas (Section 13) */}
-        <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-stone-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
-            <div>
-              <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block">
-                Visual Optimized Logistics Dispatch Map
-              </span>
-              <h2 className="text-base font-black text-stone-900 mt-0.5">
-                Farmers → Aggregation Hub → Buyer DC
-              </h2>
-            </div>
-            <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1">
-              <Navigation className="w-3.5 h-3.5" />
-              <span>Live Telematics</span>
-            </span>
-          </div>
+        {/* VIEW 1: ACTIVE ROUTE & TSP MAP */}
+        {activeTab === 'route' && (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* LEFT: Route Optimization Map Canvas (Section 13) */}
+            <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-stone-200 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+                <div>
+                  <span className="text-xs font-bold text-stone-500 uppercase tracking-wider block">
+                    Visual Optimized Logistics Dispatch Map
+                  </span>
+                  <h2 className="text-base font-black text-stone-900 mt-0.5">
+                    Farmers → Aggregation Hub → Buyer DC
+                  </h2>
+                </div>
+                <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-bold flex items-center gap-1 shrink-0 whitespace-nowrap">
+                  <Navigation className="w-3.5 h-3.5 shrink-0" />
+                  <span>Live Telematics</span>
+                </span>
+              </div>
 
           {/* SVG Map of the Multi-stop pickup route */}
           <div className="relative rounded-2xl overflow-hidden border border-stone-200 bg-stone-950 aspect-16/10 flex items-center justify-center p-4">
@@ -317,17 +434,151 @@ export const LogisticsDashboard: React.FC<LogisticsDashboardProps> = ({
                       />
                       <button
                         onClick={handleVerifyOtp}
-                        className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs"
+                        className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs shrink-0 whitespace-nowrap transition-colors"
                       >
                         Verify & Load
                       </button>
                     </div>
+                    {otpErrorMessage && (
+                      <p className="text-[11px] text-red-600 font-semibold">{otpErrorMessage}</p>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           </div>
         </div>
+      </div>
+    )}
+
+        {/* VIEW 2: LOGISTICS DISPATCH & ROUTE HISTORY */}
+        {activeTab === 'history' && (
+          <div className="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-stone-100 pb-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <History className="w-5 h-5 text-blue-600 shrink-0" />
+                  <h2 className="text-lg font-black text-stone-900">Logistics Dispatch & Route History</h2>
+                </div>
+                <p className="text-xs text-stone-600 mt-0.5">
+                  Complete audit trail of all cold-chain dispatches, fuel savings, and digital OTP consignments.
+                </p>
+              </div>
+
+              <button
+                id="export-logistics-history-btn"
+                onClick={handleExportLogisticsHistory}
+                className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+              >
+                <Download className="w-4 h-4 shrink-0" />
+                <span>Export Dispatch History (CSV)</span>
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              {[
+                {
+                  id: 'RT-AHM-092',
+                  route: 'Sanand Cluster -> Bavla Hub -> Reliance DC',
+                  date: '2026-09-14',
+                  cargo: '2,600 kg',
+                  distance: '48.2 km',
+                  fuelSaved: '₹680',
+                  temp: '3.8°C',
+                  status: 'Active In-Transit'
+                },
+                {
+                  id: 'RT-AHM-089',
+                  route: 'Sanand Cluster -> BigBasket DC Bavla',
+                  date: '2026-09-12',
+                  cargo: '2,800 kg',
+                  distance: '42.5 km',
+                  fuelSaved: '₹780',
+                  temp: '4.0°C',
+                  status: 'Completed & Delivered'
+                },
+                {
+                  id: 'RT-KHD-074',
+                  route: 'Kheda Hub -> Reliance Fresh Sarkhej',
+                  date: '2026-09-09',
+                  cargo: '3,200 kg',
+                  distance: '58.0 km',
+                  fuelSaved: '₹1,150',
+                  temp: '3.8°C',
+                  status: 'Completed & Delivered'
+                },
+                {
+                  id: 'RT-GNR-061',
+                  route: 'Kalol Farms -> Zomato Hyperpure Changodar',
+                  date: '2026-09-05',
+                  cargo: '2,400 kg',
+                  distance: '38.2 km',
+                  fuelSaved: '₹620',
+                  temp: '4.2°C',
+                  status: 'Completed & Delivered'
+                }
+              ].map((trip) => (
+                <div key={trip.id} className="p-4 rounded-2xl bg-stone-50 border border-stone-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-left">
+                  <div className="space-y-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-xs font-mono font-bold text-blue-700 bg-blue-100 px-2 py-0.5 rounded-md">
+                        {trip.id}
+                      </span>
+                      <span className="text-stone-300">•</span>
+                      <span className="text-xs font-bold text-stone-900">{trip.route}</span>
+                      <span className="text-stone-300">•</span>
+                      <span className="text-[11px] text-stone-500">{trip.date}</span>
+                    </div>
+                    <span className="text-xs text-stone-600 block">
+                      Cargo: <strong>{trip.cargo}</strong> • Distance: {trip.distance} • Temp Avg: {trip.temp}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-stone-200">
+                    <div className="text-left md:text-right">
+                      <span className="text-xs font-bold text-emerald-800 bg-emerald-100/80 px-2.5 py-0.5 rounded-md block">
+                        Saved {trip.fuelSaved} Fuel
+                      </span>
+                      <span className="text-[10px] font-bold text-stone-600 block mt-0.5">
+                        {trip.status}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* VIEW 3: REEFER TELEMATICS */}
+        {activeTab === 'fleet' && (
+          <div className="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+              <h2 className="text-base font-black text-stone-900">Cold Chain Reefer Telematics Monitoring</h2>
+              <span className="text-xs text-emerald-700 font-bold bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200">
+                100% Sensors Active
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200">
+                <span className="text-xs text-stone-500 font-semibold block">Vehicle Cabin Sensor</span>
+                <span className="text-xl font-mono font-black text-stone-900 mt-1 block">3.8°C</span>
+                <span className="text-[11px] text-emerald-700 font-semibold">Perishable Compliance Passed</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200">
+                <span className="text-xs text-stone-500 font-semibold block">Door Open Alert</span>
+                <span className="text-xl font-mono font-black text-stone-900 mt-1 block">Closed (Locked)</span>
+                <span className="text-[11px] text-stone-500">Zero temperature leaks</span>
+              </div>
+              <div className="p-4 rounded-2xl bg-stone-50 border border-stone-200">
+                <span className="text-xs text-stone-500 font-semibold block">Telemetry Heartbeat</span>
+                <span className="text-xl font-mono font-black text-blue-600 mt-1 block">Live GPS (5s)</span>
+                <span className="text-[11px] text-blue-600">Geo-fenced route locked</span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

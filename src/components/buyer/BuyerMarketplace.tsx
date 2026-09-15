@@ -8,12 +8,15 @@ import {
   ShoppingBag, 
   Users, 
   ArrowRight, 
-  Calendar,
-  Layers,
-  Clock,
-  TrendingUp,
-  CheckCircle2,
-  ChevronRight
+  Calendar, 
+  Layers, 
+  Clock, 
+  TrendingUp, 
+  CheckCircle2, 
+  ChevronRight,
+  History,
+  Download,
+  FileText
 } from 'lucide-react';
 import { Crop, Order } from '../../types';
 import { ProductDetailModal } from './ProductDetailModal';
@@ -35,6 +38,7 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedQuality, setSelectedQuality] = useState('All');
   const [selectedLocation, setSelectedLocation] = useState('All');
+  const [orderFilter, setOrderFilter] = useState<'all' | 'escrow' | 'completed'>('all');
 
   // Modals state
   const [detailModalCrop, setDetailModalCrop] = useState<Crop | null>(null);
@@ -51,34 +55,127 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
     return matchesSearch && matchesCat && matchesQuality && matchesLoc;
   });
 
+  const [orderSuccessBanner, setOrderSuccessBanner] = useState<string | null>(null);
+
+  const handleExportBuyerHistory = () => {
+    const timestamp = new Date().toLocaleString('en-IN');
+    let csv = `AGRINEX - BUYER PROCUREMENT & ESCROW SETTLEMENT LEDGER\n`;
+    csv += `Exported On,${timestamp}\n`;
+    csv += `Organization,FreshAgro Retail Pvt Ltd\n`;
+    csv += `Buyer Account,AGX-BYR-AHM-041\n\n`;
+    csv += `Order ID,Crop / Lot Description,Quantity (kg),Price per kg (INR),Total Contract Value (INR),Farmer / Seller,Location,Order Date,Escrow Lock Status,Delivery Status\n`;
+    orders.forEach((ord) => {
+      csv += `"${ord.id}","${ord.cropName}",${ord.quantityKg},${ord.pricePerKg},${ord.totalAmount},"${ord.farmerName}","${ord.farmerLocation}","${ord.orderDate}","${ord.escrowStatus}","${ord.deliveryStatus}"\n`;
+    });
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Agrinex_Buyer_Procurement_History_${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const filteredBuyerOrders = orders.filter((o) => {
+    if (orderFilter === 'escrow') return o.escrowStatus === 'ESCROWED' || !o.timeline?.paymentRelease;
+    if (orderFilter === 'completed') return o.escrowStatus === 'RELEASED' || o.timeline?.paymentRelease;
+    return true;
+  });
+
   return (
-    <div className="space-y-6">
-      {/* Sub tabs navigation */}
-      <div className="bg-white rounded-2xl p-1.5 border border-stone-200 shadow-xs flex items-center justify-between">
-        <div className="flex items-center gap-1">
-          {[
-            { id: 'marketplace', label: 'Procure Produce' },
-            { id: 'orders', label: 'Escrow Contracts & Orders' },
-            { id: 'rfq', label: 'Create Bulk Demand (RFQ)' },
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSubTab(tab.id as any)}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeSubTab === tab.id
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100'
-              }`}
-            >
-              {tab.label}
-            </button>
-          ))}
+    <div className="flex flex-col lg:flex-row items-start gap-6">
+      {/* LEFT SIDEBAR: SUB-MENU BUTTONS */}
+      <aside className="w-full lg:w-64 lg:shrink-0 lg:sticky lg:top-24 space-y-4">
+        <div className="bg-white rounded-3xl p-3 border border-stone-200/90 shadow-xs space-y-2">
+          <div className="px-3 pt-2 pb-1 border-b border-stone-100 flex items-center justify-between">
+            <span className="text-[11px] font-bold tracking-wider text-stone-500 uppercase">
+              Buyer Sub-Menu
+            </span>
+            <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 font-semibold border border-emerald-200">
+              Direct Trade
+            </span>
+          </div>
+
+          <nav aria-label="Buyer sub-menu" className="flex lg:flex-col gap-1 overflow-x-auto lg:overflow-visible py-1">
+            {[
+              { id: 'marketplace', label: 'Procure Produce', icon: <ShoppingBag className="w-4 h-4" />, badge: `${crops.length} lots` },
+              { id: 'orders', label: 'Procurement History', icon: <History className="w-4 h-4" />, badge: `${orders.length} orders` },
+              { id: 'rfq', label: 'Bulk Demand (RFQ)', icon: <Layers className="w-4 h-4" />, badge: 'Create' },
+            ].map((tab) => {
+              const isActive = activeSubTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  id={`buyer-submenu-${tab.id}`}
+                  onClick={() => setActiveSubTab(tab.id as any)}
+                  className={`flex items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl text-xs transition-all w-auto shrink-0 whitespace-nowrap lg:w-full text-left ${
+                    isActive
+                      ? 'bg-emerald-600 text-white shadow-sm font-bold'
+                      : 'text-stone-600 hover:text-stone-900 hover:bg-stone-100 font-semibold'
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <span className={isActive ? 'text-white' : 'text-stone-500'}>{tab.icon}</span>
+                    <span className="truncate">{tab.label}</span>
+                  </div>
+                  {tab.badge && (
+                    <span
+                      className={`text-[10px] px-1.5 py-0.5 rounded-md font-medium shrink-0 ${
+                        isActive
+                          ? 'bg-emerald-700 text-emerald-100'
+                          : 'bg-stone-100 text-stone-500'
+                      }`}
+                    >
+                      {tab.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        <div className="hidden sm:flex items-center gap-2 pr-2 text-xs font-bold text-stone-500">
-          <span>Logged in as: <strong>FreshAgro Retail Pvt Ltd</strong></span>
+        {/* Corporate Buyer Card on Left Sidebar */}
+        <div className="hidden lg:block bg-stone-900 rounded-3xl p-4 text-white border border-stone-800 shadow-sm space-y-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-sky-600/30 border border-sky-500/40 text-sky-400 flex items-center justify-center font-bold text-sm">
+              FA
+            </div>
+            <div className="min-w-0">
+              <span className="font-bold text-xs text-white block truncate">FreshAgro Retail Pvt Ltd</span>
+              <span className="text-[11px] text-stone-400 block truncate">Corporate Wholesale Buyer</span>
+            </div>
+          </div>
+          <div className="pt-2 border-t border-stone-800 text-[11px] text-stone-300 space-y-1.5">
+            <div className="flex justify-between">
+              <span className="text-stone-400">Escrow Balance</span>
+              <span className="font-mono font-bold text-emerald-400">₹8,50,000</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-stone-400">GSTIN</span>
+              <span className="font-mono text-stone-300">24AAACF1092M1Z8</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-stone-400">Smart Contract</span>
+              <span className="text-sky-400 font-medium">Auto-Disbursing</span>
+            </div>
+          </div>
         </div>
-      </div>
+      </aside>
+
+      {/* RIGHT SIDE: MAIN CONTENT AREA */}
+      <div className="flex-1 min-w-0 w-full space-y-6">
+        {orderSuccessBanner && (
+          <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 flex items-center justify-between text-xs font-semibold animate-in fade-in">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+              <span>{orderSuccessBanner}</span>
+            </div>
+            <button onClick={() => setOrderSuccessBanner(null)} className="text-emerald-700 hover:text-emerald-950">✕</button>
+          </div>
+        )}
 
       {activeSubTab === 'marketplace' && (
         <div className="space-y-6 animate-in fade-in duration-200">
@@ -268,45 +365,97 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
         </div>
       )}
 
-      {/* SUB-VIEW: BUYER ORDERS & ESCROW CONTRACTS */}
+      {/* SUB-VIEW: BUYER PROCUREMENT & ESCROW CONTRACT HISTORY */}
       {activeSubTab === 'orders' && (
-        <div className="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-stone-100 pb-3">
+        <div className="bg-white rounded-3xl p-6 border border-stone-200 shadow-sm space-y-5">
+          <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 border-b border-stone-100 pb-4">
             <div>
-              <h2 className="text-base font-black text-stone-900">Institutional Escrow Orders</h2>
-              <p className="text-xs text-stone-700">Real-time status of secured funds, dispatches, and delivery sign-offs</p>
+              <div className="flex items-center gap-2">
+                <History className="w-5 h-5 text-emerald-700 shrink-0" />
+                <h2 className="text-lg font-black text-stone-900">Buyer Procurement & Escrow History</h2>
+              </div>
+              <p className="text-xs text-stone-600 mt-0.5">
+                Audit trail of all spot market & smart pool contracts with 100% verified escrow protection.
+              </p>
             </div>
-            <span className="px-3 py-1 rounded-xl bg-emerald-100 text-emerald-800 text-xs font-bold">
-              ₹84,500 Locked in Escrow
+
+            <div className="flex flex-wrap items-center gap-2 shrink-0">
+              <button
+                id="export-buyer-history-btn"
+                onClick={handleExportBuyerHistory}
+                className="px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 shrink-0 whitespace-nowrap"
+                title="Download CSV of all past and active buyer procurements"
+              >
+                <Download className="w-4 h-4 shrink-0" />
+                <span>Export Procurement Ledger (CSV)</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Filter Bar */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-stone-50 p-3 rounded-2xl border border-stone-200">
+            <div className="flex flex-wrap items-center gap-1.5">
+              {[
+                { id: 'all', label: `All Contracts (${orders.length})` },
+                { id: 'escrow', label: `Secured In Escrow (${orders.filter(o => o.escrowStatus === 'ESCROWED').length})` },
+                { id: 'completed', label: `Dispatched / Delivered (${orders.filter(o => o.escrowStatus === 'RELEASED').length})` },
+              ].map((f) => (
+                <button
+                  key={f.id}
+                  onClick={() => setOrderFilter(f.id as any)}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 whitespace-nowrap ${
+                    orderFilter === f.id
+                      ? 'bg-stone-900 text-white shadow-xs'
+                      : 'bg-white hover:bg-stone-200 text-stone-700 border border-stone-200'
+                  }`}
+                >
+                  {f.label}
+                </button>
+              ))}
+            </div>
+
+            <span className="text-xs text-emerald-800 font-bold bg-emerald-50 px-3 py-1 rounded-xl border border-emerald-200 shrink-0 whitespace-nowrap">
+              ₹84,500 Total Escrow Volume
             </span>
           </div>
 
+          {/* Contracts List */}
           <div className="space-y-3">
-            {orders.map((ord) => (
-              <div key={ord.id} className="p-4 rounded-2xl bg-stone-50 border border-stone-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-mono font-bold text-emerald-700">{ord.id}</span>
+            {filteredBuyerOrders.map((ord) => (
+              <div key={ord.id} className="p-4 rounded-2xl bg-stone-50 border border-stone-200 flex flex-col md:flex-row items-start md:items-center justify-between gap-4 text-left">
+                <div className="space-y-1 min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-mono font-bold text-emerald-700 bg-emerald-100/70 px-2 py-0.5 rounded-md">
+                      {ord.id}
+                    </span>
                     <span className="text-stone-300">•</span>
                     <span className="text-xs font-bold text-stone-900">{ord.cropName}</span>
                     {ord.isPooled && (
                       <span className="px-2 py-0.5 rounded-full bg-purple-100 text-purple-800 text-[10px] font-bold">
-                        Smart Pooled
+                        Smart Pooled Lot
                       </span>
                     )}
+                    <span className="text-stone-300">•</span>
+                    <span className="text-[11px] text-stone-500">{ord.orderDate}</span>
                   </div>
-                  <span className="text-xs text-stone-700 mt-1 block">
-                    Seller: <strong>{ord.farmerName}</strong> • {ord.quantityKg} kg @ ₹{ord.pricePerKg}/kg
+                  <span className="text-xs text-stone-600 block">
+                    Producer / Source: <strong className="text-stone-800">{ord.farmerName}</strong> • {ord.quantityKg.toLocaleString()} kg @ ₹{ord.pricePerKg}/kg
                   </span>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <span className="text-xs font-mono font-bold text-stone-900">₹{ord.totalAmount.toLocaleString('en-IN')}</span>
-                    <span className="text-[10px] text-sky-700 font-bold block uppercase">{ord.escrowStatus}</span>
+                <div className="flex items-center justify-between md:justify-end gap-3 w-full md:w-auto shrink-0 pt-2 md:pt-0 border-t md:border-t-0 border-stone-200">
+                  <div className="text-left md:text-right">
+                    <span className="text-sm font-mono font-black text-stone-900 block">₹{ord.totalAmount.toLocaleString('en-IN')}</span>
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${
+                      ord.escrowStatus === 'RELEASED'
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                        : 'bg-sky-100 text-sky-800 border border-sky-300'
+                    }`}>
+                      {ord.escrowStatus === 'RELEASED' ? '✓ Completed & Disbursed' : '🔒 Escrow Locked'}
+                    </span>
                   </div>
 
-                  <span className="px-3 py-1.5 rounded-xl bg-white border border-stone-300 text-stone-700 font-semibold text-xs">
+                  <span className="px-3 py-1.5 rounded-xl bg-white border border-stone-300 text-stone-700 font-semibold text-xs shrink-0 whitespace-nowrap">
                     {ord.deliveryStatus}
                   </span>
                 </div>
@@ -348,7 +497,7 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
 
             <button
               type="button"
-              onClick={() => alert('RFQ broadcasted to 8 nearby FPO aggregators! Clusters will submit aggregation proposals.')}
+              onClick={() => setOrderSuccessBanner('RFQ broadcasted to 8 nearby FPO aggregators! Clusters will submit aggregation proposals within 2 hours.')}
               className="w-full py-3 rounded-xl bg-emerald-600 text-white font-bold shadow-md hover:bg-emerald-500 transition-colors"
             >
               Broadcast RFQ to Farmer Clusters
@@ -356,6 +505,7 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
           </form>
         </div>
       )}
+      </div>
 
       {/* MODALS */}
       <ProductDetailModal
@@ -376,7 +526,7 @@ export const BuyerMarketplace: React.FC<BuyerMarketplaceProps> = ({
         onClose={() => setOrderModalCrop(null)}
         onOrderCompleted={(newOrder) => {
           onOrderCreated(newOrder);
-          alert(`Order ${newOrder.id} placed! ₹${newOrder.totalAmount?.toLocaleString()} secured in Escrow.`);
+          setOrderSuccessBanner(`Order ${newOrder.id} placed! ₹${newOrder.totalAmount?.toLocaleString()} secured in Smart Escrow.`);
         }}
       />
     </div>

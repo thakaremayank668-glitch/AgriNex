@@ -171,14 +171,14 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
       </div>
 
       {/* Main Navigation Bar */}
-      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-4">
-        {/* Brand Identity */}
-        <div className="flex items-center gap-3">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2.5 flex items-center justify-between gap-3 sm:gap-4">
+        {/* Left Side: Brand Identity & Persona Switcher */}
+        <div className="flex items-center gap-3 lg:gap-5 min-w-0 shrink-0">
           <button 
             onClick={() => onSelectRole('landing')} 
-            className="flex items-center gap-2.5 text-left group"
+            className="flex items-center gap-2.5 text-left group shrink-0"
           >
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 flex items-center justify-center text-white shadow-md shadow-emerald-950/40 group-hover:scale-105 transition-transform">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-emerald-600 to-emerald-800 flex items-center justify-center text-white shadow-md shadow-emerald-950/40 group-hover:scale-105 transition-transform shrink-0">
               <Sprout className="w-5 h-5 text-emerald-100" />
             </div>
             <div>
@@ -186,53 +186,50 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
                 <span className="font-extrabold text-lg tracking-tight text-white font-mono">
                   AGRI<span className="text-emerald-400">NEX</span>
                 </span>
-                <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                  v2.6 AI
-                </span>
               </div>
               <p className="text-[10px] text-stone-400 tracking-wide font-medium hidden sm:block">
                 Decision-Support & Fair Aggregation Ecosystem
               </p>
             </div>
           </button>
+
+          {/* Persona Switcher Buttons (docked to left side) */}
+          <nav aria-label="Persona navigation" className="hidden lg:flex items-center p-1 bg-stone-800/90 rounded-xl border border-stone-700/80 gap-1 shrink-0">
+            {roles.map((role) => {
+              const isActive = currentRole === role.id;
+              return (
+                <button
+                  key={role.id}
+                  id={`role-btn-${role.id}`}
+                  onClick={() => onSelectRole(role.id)}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all shrink-0 whitespace-nowrap ${
+                    isActive
+                      ? 'bg-emerald-600 text-white shadow-sm font-semibold'
+                      : 'text-stone-300 hover:text-white hover:bg-stone-700/60'
+                  }`}
+                >
+                  <span className="shrink-0">{role.icon}</span>
+                  <span>{role.label}</span>
+                  {role.badge && (
+                    <span className={`text-[9px] px-1 rounded shrink-0 ${
+                      isActive ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-500/20 text-emerald-300'
+                    }`}>
+                      {role.badge}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
         </div>
 
-        {/* Persona Switcher Buttons (Role Navigation) */}
-        <nav className="hidden lg:flex items-center p-1 bg-stone-800/90 rounded-xl border border-stone-700/80 gap-1">
-          {roles.map((role) => {
-            const isActive = currentRole === role.id;
-            return (
-              <button
-                key={role.id}
-                id={`role-btn-${role.id}`}
-                onClick={() => onSelectRole(role.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  isActive
-                    ? 'bg-emerald-600 text-white shadow-sm font-semibold'
-                    : 'text-stone-300 hover:text-white hover:bg-stone-700/60'
-                }`}
-              >
-                {role.icon}
-                <span>{role.label}</span>
-                {role.badge && (
-                  <span className={`text-[9px] px-1 rounded ${
-                    isActive ? 'bg-emerald-800 text-emerald-100' : 'bg-emerald-500/20 text-emerald-300'
-                  }`}>
-                    {role.badge}
-                  </span>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-
         {/* Action Shortcuts & User Controls */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-nowrap">
           {/* Mobile Frame Simulator Toggle for Farmer persona */}
           <button
             id="toggle-mobile-frame-btn"
             onClick={onToggleMobileFrame}
-            className={`p-2 rounded-lg border transition-all ${
+            className={`p-2 rounded-lg border transition-all shrink-0 ${
               isMobileFrame
                 ? 'bg-emerald-600/30 text-emerald-300 border-emerald-500'
                 : 'bg-stone-800 text-stone-300 border-stone-700 hover:bg-stone-700'
@@ -246,10 +243,10 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
           <button
             id="quick-ai-quality-btn"
             onClick={onOpenAiQuality}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-700/50 text-xs font-semibold shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/70 hover:bg-emerald-900/90 text-emerald-300 border border-emerald-700/50 text-xs font-semibold shadow-sm transition-all shrink-0 whitespace-nowrap"
             title="Scan crop with AI Vision Inspection"
           >
-            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span className="hidden md:inline">AI Quality Check</span>
             <span className="md:hidden">AI Inspect</span>
           </button>
@@ -258,10 +255,10 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
           <button
             id="quick-voice-btn"
             onClick={onOpenVoiceAssistant}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold shadow-sm transition-all animate-pulse"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-500/40 text-xs font-semibold shadow-sm transition-all animate-pulse shrink-0 whitespace-nowrap"
             title="Speak in Gujarati, Hindi or English"
           >
-            <Mic className="w-3.5 h-3.5 text-amber-400" />
+            <Mic className="w-3.5 h-3.5 text-amber-400 shrink-0" />
             <span className="hidden sm:inline">Voice Assist</span>
           </button>
 
@@ -269,7 +266,7 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
           <button
             id="nav-notifs-btn"
             onClick={onOpenNotifications}
-            className="relative p-2 rounded-lg bg-stone-800 text-stone-300 hover:text-white hover:bg-stone-700 transition-colors"
+            className="relative p-2 rounded-lg bg-stone-800 text-stone-300 hover:text-white hover:bg-stone-700 transition-colors shrink-0"
             title="System notifications"
           >
             <Bell className="w-4 h-4" />
@@ -284,29 +281,29 @@ export const Navbar: React.FC<NavbarProps> = (props) => {
           <button
             id="nav-auth-btn"
             onClick={onOpenAuth}
-            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-xs font-medium transition-colors"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-stone-800 hover:bg-stone-700 text-stone-200 border border-stone-700 text-xs font-medium transition-colors shrink-0 whitespace-nowrap"
           >
-            <User className="w-3.5 h-3.5 text-emerald-400" />
+            <User className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
             <span className="hidden sm:inline">Ramesh Patel (Farmer)</span>
           </button>
         </div>
       </div>
 
       {/* Mobile/Tablet Role Switcher Row */}
-      <div className="lg:hidden border-t border-stone-800 bg-stone-900/95 overflow-x-auto px-3 py-1.5 flex gap-1.5">
+      <div className="lg:hidden border-t border-stone-800 bg-stone-900/95 overflow-x-auto px-3 py-2 flex items-center gap-2">
         {roles.map((role) => {
           const isActive = currentRole === role.id;
           return (
             <button
               key={role.id}
               onClick={() => onSelectRole(role.id)}
-              className={`flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] whitespace-nowrap font-medium transition-all ${
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs shrink-0 whitespace-nowrap font-medium transition-all ${
                 isActive
-                  ? 'bg-emerald-600 text-white font-semibold'
+                  ? 'bg-emerald-600 text-white font-semibold shadow-xs'
                   : 'text-stone-300 bg-stone-800 hover:bg-stone-700'
               }`}
             >
-              {role.icon}
+              <span className="shrink-0">{role.icon}</span>
               <span>{role.label}</span>
             </button>
           );
